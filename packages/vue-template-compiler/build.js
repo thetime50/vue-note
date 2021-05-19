@@ -2192,7 +2192,7 @@ function genData$1 (el) {
   return data
 }
 
-var style = {
+var style = { // 在xxx xxx时被引用
   staticKeys: ['staticStyle'],
   transformNode: transformNode$1,
   genData: genData$1
@@ -3366,10 +3366,10 @@ var model = {
   preTransformNode: preTransformNode
 };
 
-var modules = [
-  klass,
-  style,
-  model
+var modules = [  // 不同attr的解析方法 在xxx地方xxx的时候被引用
+  klass, // class 解析
+  style, // style 解析 g:2195
+  model // v-model 解析
 ];
 
 /*  */
@@ -3572,7 +3572,7 @@ var directives = {
 
 var baseOptions = {
   expectHTML: true,
-  modules: modules,
+  modules: modules, // 不同属性的解析方法
   directives: directives,
   isPreTag: isPreTag,
   isUnaryTag: isUnaryTag,
@@ -3907,7 +3907,7 @@ var baseDirectives = {
 var CodegenState = function CodegenState (options) {
   this.options = options;
   this.warn = options.warn || baseWarn;
-  this.transforms = pluckModuleFunction(options.modules, 'transformCode');
+  this.transforms = pluckModuleFunction(options.modules, 'transformCode'); // 取对象数组下的某一个属性值组成数组
   this.dataGenFns = pluckModuleFunction(options.modules, 'genData');
   this.directives = extend(extend({}, baseDirectives), options.directives);
   var isReservedTag = options.isReservedTag || no;
@@ -4646,9 +4646,9 @@ function createCompileToFunctionFn (compile) {
   var cache = Object.create(null);
 
   return function compileToFunctions (
-    template,
+    template, // 什么格式?ast 还是 ?
     options,
-    vm
+    vm  // 这函数在运行时执行? vm的来源
   ) {
     options = extend({}, options);
     var warn$$1 = options.warn || warn;
@@ -4673,17 +4673,22 @@ function createCompileToFunctionFn (compile) {
     }
 
     // check cache
+    // 这个key会是什么
     var key = options.delimiters
       ? String(options.delimiters) + template
       : template;
-    if (cache[key]) {
+    if (cache[key]) { // 编译结果缓存 代理模式
       return cache[key]
     }
 
     // compile
-    var compiled = compile(template, options);
+    // compiled.render 就是code字符串 用来生产最终的rander函数
+    // 这里的compile函数是 createCompilerCreator 函数里产生的compile,已经是比较末级的产物了
+    // 这个compile在比较外层的地方先被加工 添加，运行时在比较内层执行
+    var compiled = compile(template, options); // 编译模板
 
     // check compilation errors/tips
+    // 生产环境编译报错
     if (process.env.NODE_ENV !== 'production') {
       if (compiled.errors && compiled.errors.length) {
         if (options.outputSourceRange) {
@@ -4714,7 +4719,7 @@ function createCompileToFunctionFn (compile) {
     // turn code into functions
     var res = {};
     var fnGenErrors = [];
-    res.render = createFunction(compiled.render, fnGenErrors);
+    res.render = createFunction(compiled.render, fnGenErrors); // code to function
     res.staticRenderFns = compiled.staticRenderFns.map(function (code) {
       return createFunction(code, fnGenErrors)
     });
@@ -4745,8 +4750,8 @@ function createCompileToFunctionFn (compile) {
 /*  */
 
 function createCompilerCreator (baseCompile) {
-  return function createCompiler (baseOptions) {
-    function compile (
+  return function createCompiler (baseOptions) { // 对应 var ref = createCompiler(baseOptions); 的引用
+    function compile ( // baseCompile加工
       template,
       options
     ) {
@@ -4758,14 +4763,16 @@ function createCompilerCreator (baseCompile) {
         (tip ? tips : errors).push(msg);
       };
 
+      // 覆盖默认配置处理
       if (options) {
         if (process.env.NODE_ENV !== 'production' && options.outputSourceRange) {
           // $flow-disable-line
           var leadingSpaceLength = template.match(/^\s*/)[0].length;
 
-          warn = function (msg, range, tip) {
+          warn = function (msg, range, tip) { // 生产模式替换报警函数
             var data = { msg: msg };
             if (range) {
+              // 报警函数嵌套退格处理
               if (range.start != null) {
                 data.start = range.start + leadingSpaceLength;
               }
@@ -4777,11 +4784,13 @@ function createCompilerCreator (baseCompile) {
           };
         }
         // merge custom modules
+        // 添加配置的modules
         if (options.modules) {
           finalOptions.modules =
             (baseOptions.modules || []).concat(options.modules);
         }
         // merge custom directives
+        // 添加配置的分隔符??
         if (options.directives) {
           finalOptions.directives = extend(
             Object.create(baseOptions.directives || null),
@@ -4799,6 +4808,7 @@ function createCompilerCreator (baseCompile) {
       finalOptions.warn = warn;
 
       var compiled = baseCompile(template.trim(), finalOptions);
+      //得到 ast render staticRenderFns
       if (process.env.NODE_ENV !== 'production') {
         detectErrors(compiled.ast, warn);
       }
@@ -4808,8 +4818,11 @@ function createCompilerCreator (baseCompile) {
     }
 
     return {
-      compile: compile,
-      compileToFunctions: createCompileToFunctionFn(compile)
+      compile: compile, // todo 这个compile出来的肯是个code
+      // compile再加工
+      // 扩展参数 格式为( template,options,vm )
+      // 编译template 并从code字符串构造rander函数
+      compileToFunctions: createCompileToFunctionFn(compile) 
     }
   }
 }
@@ -4819,15 +4832,18 @@ function createCompilerCreator (baseCompile) {
 // `createCompilerCreator` allows creating compilers that use alternative
 // parser/optimizer/codegen, e.g the SSR optimizing compiler.
 // Here we just export a default compiler using the default parts.
+// createCompiler 是 baseCompile 的加强版 算装饰器模式??
+// 给baseCompile 添加配置的加工/输入参数的加工和输出结果的加工 得到最终的createCompiler
 var createCompiler = createCompilerCreator(function baseCompile (
   template,
   options
 ) {
-  var ast = parse(template.trim(), options);
+  // todo code是哪里得到的
+  var ast = parse(template.trim(), options); // parse函数语法解析 options是baseOptions的加强板
   if (options.optimize !== false) {
-    optimize(ast, options);
+    optimize(ast, options); // 优化
   }
-  var code = generate(ast, options);
+  var code = generate(ast, options); // todo 调用 options.modules??
   return {
     ast: ast,
     render: code.render,
@@ -4838,6 +4854,12 @@ var createCompiler = createCompilerCreator(function baseCompile (
 /*  */
 
 var ref = createCompiler(baseOptions);
+/*
+{
+compile
+compileToFunctions
+}
+*/
 var compile = ref.compile;
 var compileToFunctions = ref.compileToFunctions;
 
@@ -5386,7 +5408,7 @@ var compileToFunctions$1 = ref$1.compileToFunctions;
 /*  */
 
 exports.parseComponent = parseComponent;
-exports.compile = compile;
+exports.compile = compile; //compile.render
 exports.compileToFunctions = compileToFunctions;
 exports.ssrCompile = compile$1;
 exports.ssrCompileToFunctions = compileToFunctions$1;
