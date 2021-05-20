@@ -34,7 +34,7 @@ Vue.prototype.$mount = function (
   if (!options.render) {
     let template = options.template
     if (template) {
-      if (typeof template === 'string') {
+      if (typeof template === 'string') { // id选择器字符串做模板
         if (template.charAt(0) === '#') {
           template = idToTemplate(template)
           /* istanbul ignore if */
@@ -45,7 +45,7 @@ Vue.prototype.$mount = function (
             )
           }
         }
-      } else if (template.nodeType) {
+      } else if (template.nodeType) { // 上的dom做模板 ??
         template = template.innerHTML
       } else {
         if (process.env.NODE_ENV !== 'production') {
@@ -53,7 +53,7 @@ Vue.prototype.$mount = function (
         }
         return this
       }
-    } else if (el) {
+    } else if (el) { // 传入的dom 或者整个网页dom 做模板
       template = getOuterHTML(el)
     }
     if (template) {
@@ -64,13 +64,13 @@ Vue.prototype.$mount = function (
 
       const { render, staticRenderFns } = compileToFunctions(template, {
         outputSourceRange: process.env.NODE_ENV !== 'production',
-        shouldDecodeNewlines,
-        shouldDecodeNewlinesForHref,
-        delimiters: options.delimiters,
-        comments: options.comments
+        shouldDecodeNewlines, // 代码换行
+        shouldDecodeNewlinesForHref, // ref 代码换行
+        delimiters: options.delimiters, // 分隔符
+        comments: options.comments // 注释
       }, this)
       options.render = render
-      options.staticRenderFns = staticRenderFns
+      options.staticRenderFns = staticRenderFns // ?
 
       /* istanbul ignore if */
       if (process.env.NODE_ENV !== 'production' && config.performance && mark) {

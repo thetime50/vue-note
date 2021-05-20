@@ -47,7 +47,7 @@ export function generate (
   const state = new CodegenState(options)
   const code = ast ? genElement(ast, state) : '_c("div")'
   return {
-    render: `with(this){return ${code}}`,
+    render: `with(this){return ${code}}`, // result to vue loader
     staticRenderFns: state.staticRenderFns
   }
 }
@@ -89,7 +89,7 @@ export function genElement (el: ASTElement, state: CodegenState): string {
     }
     // module transforms
     for (let i = 0; i < state.transforms.length; i++) {
-      code = state.transforms[i](el, code)
+      code = state.transforms[i](el, code) // state ??
     }
     return code
   }

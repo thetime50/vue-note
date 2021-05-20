@@ -4646,7 +4646,7 @@ function createCompileToFunctionFn (compile) {
   var cache = Object.create(null);
 
   return function compileToFunctions (
-    template, // 什么格式?ast 还是 ?
+    template, // 什么格式?ast 还是 ? //传入的字符串格式的模板
     options,
     vm  // 这函数在运行时执行? vm的来源
   ) {

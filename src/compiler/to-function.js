@@ -22,9 +22,9 @@ export function createCompileToFunctionFn (compile: Function): Function {
   const cache = Object.create(null)
 
   return function compileToFunctions (
-    template: string,
+    template: string, // 传入的字符串格式的模板
     options?: CompilerOptions,
-    vm?: Component
+    vm?: Component // 这函数在运行时执行? vm的来源
   ): CompiledFunctionResult {
     options = extend({}, options)
     const warn = options.warn || baseWarn
@@ -49,17 +49,24 @@ export function createCompileToFunctionFn (compile: Function): Function {
     }
 
     // check cache
+    // 这个key会是什么
     const key = options.delimiters
       ? String(options.delimiters) + template
       : template
-    if (cache[key]) {
+    if (cache[key]) { // 编译结果缓存 代理模式
       return cache[key]
     }
 
     // compile
-    const compiled = compile(template, options)
+    // compiled.render 就是code字符串 用来生产最终的rander函数
+    // 这里的compile函数是 createCompilerCreator 函数里产生的compile,已经是比较末级的产物了
+    // 这个compile在比较外层的地方先被加工 添加，运行时在比较内层执行
+    const compiled = compile(template, options) // 编译模板 // 是baseCompile 经过了 createCompilerCreator createCompiler 包装后的函数
+    // 就是generate返回值
+    // 这里的compiled.render应该是generete里的模板函数字符串 code.rander
 
     // check compilation errors/tips
+    // 生产环境编译报错
     if (process.env.NODE_ENV !== 'production') {
       if (compiled.errors && compiled.errors.length) {
         if (options.outputSourceRange) {
@@ -90,8 +97,8 @@ export function createCompileToFunctionFn (compile: Function): Function {
     // turn code into functions
     const res = {}
     const fnGenErrors = []
-    res.render = createFunction(compiled.render, fnGenErrors)
-    res.staticRenderFns = compiled.staticRenderFns.map(code => {
+    res.render = createFunction(compiled.render, fnGenErrors) // code to function
+    res.staticRenderFns = compiled.staticRenderFns.map(code => { // 递归加工code
       return createFunction(code, fnGenErrors)
     })
 
