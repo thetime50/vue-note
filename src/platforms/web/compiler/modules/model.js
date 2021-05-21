@@ -46,8 +46,8 @@ function preTransformNode (el: ASTElement, options: CompilerOptions) {
       // 1. checkbox
       const branch0 = cloneASTElement(el)
       // process for on the main node
-      processFor(branch0)
-      addRawAttr(branch0, 'type', 'checkbox')
+      processFor(branch0) // v-for 解析 得到in左侧3个循环变量名 和右侧表达式
+      addRawAttr(branch0, 'type', 'checkbox') // 添加type:'clickbox' 属性到 attrsMap.type attrsList 上
       processElement(branch0, options)
       branch0.processed = true // prevent it from double-processed
       branch0.if = `(${typeBinding})==='checkbox'` + ifConditionExtra

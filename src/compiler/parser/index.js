@@ -25,7 +25,12 @@ export const onRE = /^@|^v-on:/
 export const dirRE = process.env.VBIND_PROP_SHORTHAND
   ? /^v-|^@|^:|^\.|^#/
   : /^v-|^@|^:|^#/
+// [\s\S] 为了匹配包括换行的所有字符
+// 检查包含in关键字
+// [0] = all match string   [1] = left   [2] = right
 export const forAliasRE = /([\s\S]*?)\s+(?:in|of)\s+([\s\S]*)/
+// v-for 左侧3参数的后两个
+// [0] = all match string   [1] = 第一个,后的变量   [2] = 第2个,后的变量
 export const forIteratorRE = /,([^,\}\]]*)(?:,([^,\}\]]*))?$/
 const stripParensRE = /^\(|\)$/g
 const dynamicArgRE = /^\[.*\]$/
@@ -434,7 +439,7 @@ export function processElement (
   element: ASTElement,
   options: CompilerOptions
 ) {
-  processKey(element)
+  processKey(element) // 解析key属性并添加到ast上 或者提示等
 
   // determine whether this is a plain element after
   // removing structural attributes
@@ -444,17 +449,18 @@ export function processElement (
     !element.attrsList.length
   )
 
-  processRef(element)
-  processSlotContent(element)
-  processSlotOutlet(element)
-  processComponent(element)
+  processRef(element) // 获取ref属性 和标志 v-for 中的ref
+  processSlotContent(element) // 子组件的 slot 定义 内容处理
+  processSlotOutlet(element) // 父组件使用slot标签
+  processComponent(element) // <component> 标签处理
   for (let i = 0; i < transforms.length; i++) {
-    element = transforms[i](element, options) || element
+    element = transforms[i](element, options) || element // klass style 属性处理
   }
   processAttrs(element)
   return element
 }
 
+// 解析key属性并添加到ast上 或者提示等
 function processKey (el) {
   const exp = getBindingAttr(el, 'key')
   if (exp) {
@@ -490,12 +496,13 @@ function processRef (el) {
   }
 }
 
+// process -> parse
 export function processFor (el: ASTElement) {
   let exp
   if ((exp = getAndRemoveAttr(el, 'v-for'))) {
     const res = parseFor(exp)
     if (res) {
-      extend(el, res)
+      extend(el, res) // 添加解析出来的属性
     } else if (process.env.NODE_ENV !== 'production') {
       warn(
         `Invalid v-for expression: ${exp}`,
@@ -513,20 +520,20 @@ type ForParseResult = {
 };
 
 export function parseFor (exp: string): ?ForParseResult {
-  const inMatch = exp.match(forAliasRE)
+  const inMatch = exp.match(forAliasRE) // 包含in|of关键字
   if (!inMatch) return
   const res = {}
-  res.for = inMatch[2].trim()
-  const alias = inMatch[1].trim().replace(stripParensRE, '')
-  const iteratorMatch = alias.match(forIteratorRE)
-  if (iteratorMatch) {
-    res.alias = alias.replace(forIteratorRE, '').trim()
-    res.iterator1 = iteratorMatch[1].trim()
+  res.for = inMatch[2].trim() // right expression
+  const alias = inMatch[1].trim().replace(stripParensRE, '') // left expression 左侧表达式括号没啥用
+  const iteratorMatch = alias.match(forIteratorRE) // v-for 左侧3参数的后两个
+  if (iteratorMatch) { // 如果有第二第三个参数
+    res.alias = alias.replace(forIteratorRE, '').trim() // 第一个参数
+    res.iterator1 = iteratorMatch[1].trim() // 第二个参数
     if (iteratorMatch[2]) {
-      res.iterator2 = iteratorMatch[2].trim()
+      res.iterator2 = iteratorMatch[2].trim() // 第三个参数
     }
   } else {
-    res.alias = alias
+    res.alias = alias // 循环得到的key
   }
   return res
 }
@@ -602,11 +609,12 @@ function processOnce (el) {
 // e.g. <template slot="xxx">, <div slot-scope="xxx">
 function processSlotContent (el) {
   let slotScope
+  // 单独放在el的slotScope属性下
   if (el.tag === 'template') {
     slotScope = getAndRemoveAttr(el, 'scope')
     /* istanbul ignore if */
-    if (process.env.NODE_ENV !== 'production' && slotScope) {
-      warn(
+    if (process.env.NODE_ENV !== 'production' && slotScope) { // 如果有scope 属性定义
+      warn( // slot-scope 属性在普通元素上使用是什么效果???
         `the "scope" attribute for scoped slots have been deprecated and ` +
         `replaced by "slot-scope" since 2.5. The new "slot-scope" attribute ` +
         `can also be used on plain elements in addition to <template> to ` +
@@ -616,7 +624,7 @@ function processSlotContent (el) {
       )
     }
     el.slotScope = slotScope || getAndRemoveAttr(el, 'slot-scope')
-  } else if ((slotScope = getAndRemoveAttr(el, 'slot-scope'))) {
+  } else if ((slotScope = getAndRemoveAttr(el, 'slot-scope'))) { // 如果有slot-scope 属性定义
     /* istanbul ignore if */
     if (process.env.NODE_ENV !== 'production' && el.attrsMap['v-for']) {
       warn(
@@ -631,6 +639,7 @@ function processSlotContent (el) {
   }
 
   // slot="xxx"
+  // 其他标签的slot 
   const slotTarget = getBindingAttr(el, 'slot')
   if (slotTarget) {
     el.slotTarget = slotTarget === '""' ? '"default"' : slotTarget
@@ -638,7 +647,8 @@ function processSlotContent (el) {
     // preserve slot as an attribute for native shadow DOM compat
     // only for non-scoped slots.
     if (el.tag !== 'template' && !el.slotScope) {
-      addAttr(el, 'slot', slotTarget, getRawBindingAttr(el, 'slot'))
+      // 另一个数组了?
+      addAttr(el, 'slot', slotTarget, getRawBindingAttr(el, 'slot')) // add slot to attrs[]
     }
   }
 
@@ -646,7 +656,7 @@ function processSlotContent (el) {
   if (process.env.NEW_SLOT_SYNTAX) {
     if (el.tag === 'template') {
       // v-slot on <template>
-      const slotBinding = getAndRemoveAttrByRegex(el, slotRE)
+      const slotBinding = getAndRemoveAttrByRegex(el, slotRE) //从attrsList列表中查找并删除 v-slot属性
       if (slotBinding) {
         if (process.env.NODE_ENV !== 'production') {
           if (el.slotTarget || el.slotScope) {
@@ -655,7 +665,7 @@ function processSlotContent (el) {
               el
             )
           }
-          if (el.parent && !maybeComponent(el.parent)) {
+          if (el.parent && !maybeComponent(el.parent)) { // 不是原生tag
             warn(
               `<template v-slot> can only appear at the root level inside ` +
               `the receiving component`,
@@ -694,13 +704,14 @@ function processSlotContent (el) {
           }
         }
         // add the component's children to its default slot
+        // 将slot 内的默认内容构造为默认的template 放到指定的命名作用域scopedSlots[name]里
         const slots = el.scopedSlots || (el.scopedSlots = {})
         const { name, dynamic } = getSlotName(slotBinding)
-        const slotContainer = slots[name] = createASTElement('template', [], el)
+        const slotContainer = slots[name] = createASTElement('template', [], el) //添加一层template 加了一层template slot层
         slotContainer.slotTarget = name
         slotContainer.slotTargetDynamic = dynamic
-        slotContainer.children = el.children.filter((c: any) => {
-          if (!c.slotScope) {
+        slotContainer.children = el.children.filter((c: any) => { // 移动子元素到 tem-slot 下并处理子元素的parent
+          if (!c.slotScope) { // 不是嵌套的slot子元素
             c.parent = slotContainer
             return true
           }
@@ -727,11 +738,11 @@ function getSlotName (binding) {
       )
     }
   }
-  return dynamicArgRE.test(name)
+  return dynamicArgRE.test(name) // 动态slot名称
     // dynamic [name]
     ? { name: name.slice(1, -1), dynamic: true }
     // static name
-    : { name: `"${name}"`, dynamic: false }
+    : { name: `"${name}"`, dynamic: false } // 静态slot名称转换
 }
 
 // handle <slot/> outlets
@@ -759,6 +770,8 @@ function processComponent (el) {
   }
 }
 
+// 什么样的属性会被从attrsList中删除???
+// todo 这下面做的啥
 function processAttrs (el) {
   const list = el.attrsList
   let i, l, name, rawName, value, modifiers, syncGen, isDynamic
@@ -898,7 +911,7 @@ function processAttrs (el) {
 
 function checkInFor (el: ASTElement): boolean {
   let parent = el
-  while (parent) {
+  while (parent) { // 递归父级中是否有v-for属性
     if (parent.for !== undefined) {
       return true
     }
