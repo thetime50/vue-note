@@ -32,13 +32,13 @@ function preTransformNode (el: ASTElement, options: CompilerOptions) {
 
     let typeBinding
     if (map[':type'] || map['v-bind:type']) {
-      typeBinding = getBindingAttr(el, 'type')
+      typeBinding = getBindingAttr(el, 'type') // 处理函数字符串或者是静态数据对象jsonstr处理 全部都处理成字符串了
     }
     if (!map.type && !typeBinding && map['v-bind']) {
       typeBinding = `(${map['v-bind']}).type`
     }
 
-    if (typeBinding) {
+    if (typeBinding) { // 得到type绑定的属性
       const ifCondition = getAndRemoveAttr(el, 'v-if', true)
       const ifConditionExtra = ifCondition ? `&&(${ifCondition})` : ``
       const hasElse = getAndRemoveAttr(el, 'v-else', true) != null

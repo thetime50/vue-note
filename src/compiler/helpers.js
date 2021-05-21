@@ -167,11 +167,11 @@ export function getBindingAttr (
     getAndRemoveAttr(el, ':' + name) ||
     getAndRemoveAttr(el, 'v-bind:' + name)
   if (dynamicValue != null) {
-    return parseFilters(dynamicValue)
-  } else if (getStatic !== false) {
+    return parseFilters(dynamicValue) // 得到过滤器函数处理字符串
+  } else if (getStatic !== false) { // 静态数据
     const staticValue = getAndRemoveAttr(el, name)
     if (staticValue != null) {
-      return JSON.stringify(staticValue)
+      return JSON.stringify(staticValue) // 对象处理为json字符串
     }
   }
 }

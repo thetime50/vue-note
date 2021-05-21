@@ -88,8 +88,9 @@ export function parse (
   const isReservedTag = options.isReservedTag || no
   maybeComponent = (el: ASTElement) => !!el.component || !isReservedTag(el.tag)
 
-  transforms = pluckModuleFunction(options.modules, 'transformNode')
-  preTransforms = pluckModuleFunction(options.modules, 'preTransformNode')
+  // src\platforms\web\compiler\modules\index.js
+  transforms = pluckModuleFunction(options.modules, 'transformNode') // klass style
+  preTransforms = pluckModuleFunction(options.modules, 'preTransformNode') // model
   postTransforms = pluckModuleFunction(options.modules, 'postTransformNode')
 
   delimiters = options.delimiters
@@ -213,7 +214,7 @@ export function parse (
     start (tag, attrs, unary, start, end) {
       // check namespace.
       // inherit parent ns if there is one
-      const ns = (currentParent && currentParent.ns) || platformGetTagNamespace(tag)
+      const ns = (currentParent && currentParent.ns) || platformGetTagNamespace(tag) // platformGetTagNamespace只判断mathML 和 svg
 
       // handle IE svg bug
       /* istanbul ignore if */
@@ -221,22 +222,23 @@ export function parse (
         attrs = guardIESVGBug(attrs)
       }
 
+      // element 就是 ast
       let element: ASTElement = createASTElement(tag, attrs, currentParent)
       if (ns) {
-        element.ns = ns
+        element.ns = ns // 从父组件继承到相同的namespace
       }
 
       if (process.env.NODE_ENV !== 'production') {
-        if (options.outputSourceRange) {
+        if (options.outputSourceRange) { // 是配置打印源码的范围?
           element.start = start
           element.end = end
-          element.rawAttrsMap = element.attrsList.reduce((cumulated, attr) => {
+          element.rawAttrsMap = element.attrsList.reduce((cumulated, attr) => { // 数组转 {[name]:obj}
             cumulated[attr.name] = attr
             return cumulated
           }, {})
         }
         attrs.forEach(attr => {
-          if (invalidAttributeRE.test(attr.name)) {
+          if (invalidAttributeRE.test(attr.name)) { // 属性名内有无效的字符
             warn(
               `Invalid dynamic argument expression: attribute names cannot contain ` +
               `spaces, quotes, <, >, / or =.`,
@@ -248,7 +250,9 @@ export function parse (
           }
         })
       }
-
+      
+      // 禁止的标签 (forbidden tag)
+      // 服务端渲染
       if (isForbiddenTag(element) && !isServerRendering()) {
         element.forbidden = true
         process.env.NODE_ENV !== 'production' && warn(

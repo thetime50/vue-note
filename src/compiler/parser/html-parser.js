@@ -14,6 +14,7 @@ import { isNonPhrasingTag } from 'web/compiler/util'
 import { unicodeRegExp } from 'core/util/lang'
 
 // Regular Expressions for parsing tags and attributes
+// [] = \s [0] = all match string  [1] = attr name  [/] = [   [2] = \=  [/] = [   [3] = "-"  [4] = '-'  [5] = \w   ]   ]
 const attribute = /^\s*([^\s"'<>\/=]+)(?:\s*(=)\s*(?:"([^"]*)"+|'([^']*)'+|([^\s"'=<>`]+)))?/
 const dynamicArgAttribute = /^\s*((?:v-[\w-]+:|@|:|#)\[[^=]+?\][^\s"'<>\/=]*)(?:\s*(=)\s*(?:"([^"]*)"+|'([^']*)'+|([^\s"'=<>`]+)))?/
 const ncname = `[a-zA-Z_][\\-\\.0-9_a-zA-Z${unicodeRegExp.source}]*`
@@ -47,8 +48,8 @@ const isIgnoreNewlineTag = makeMap('pre,textarea', true)
 const shouldIgnoreFirstNewline = (tag, html) => tag && isIgnoreNewlineTag(tag) && html[0] === '\n'
 
 function decodeAttr (value, shouldDecodeNewlines) {
-  const re = shouldDecodeNewlines ? encodedAttrWithNewLines : encodedAttr
-  return value.replace(re, match => decodingMap[match])
+  const re = shouldDecodeNewlines ? encodedAttrWithNewLines : encodedAttr // 是否包含 &#10 &#9 to \n \t
+  return value.replace(re, match => decodingMap[match]) // html chart decode &lt;
 }
 
 export function parseHTML (html, options) { // parseHTML options 有自己的配置结构
@@ -107,7 +108,7 @@ export function parseHTML (html, options) { // parseHTML options 有自己的配
         const startTagMatch = parseStartTag() // 起始标签解析
         if (startTagMatch) {
           handleStartTag(startTagMatch) // 起始标签处理
-          if (shouldIgnoreFirstNewline(startTagMatch.tagName, html)) {
+          if (shouldIgnoreFirstNewline(startTagMatch.tagName, html)) { // 忽略第一行换行的元素
             advance(1)
           }
           continue
@@ -194,14 +195,16 @@ export function parseHTML (html, options) { // parseHTML options 有自己的配
       }
       advance(start[0].length)
       let end, attr
+      // 循环匹配属性
+      // startTagClose 包括自闭合标签
       while (!(end = html.match(startTagClose)) && (attr = html.match(dynamicArgAttribute) || html.match(attribute))) {
         attr.start = index
-        advance(attr[0].length)
+        advance(attr[0].length) // 累加 裁剪
         attr.end = index
-        match.attrs.push(attr)
+        match.attrs.push(attr) // 属性正则匹配结果加上 start end 索引
       }
-      if (end) {
-        match.unarySlash = end[1]
+      if (end) { // 这次匹配到 > 开始标签解析结束
+        match.unarySlash = end[1] // 一元消减?
         advance(end[0].length)
         match.end = index
         return match
@@ -213,38 +216,38 @@ export function parseHTML (html, options) { // parseHTML options 有自己的配
     const tagName = match.tagName
     const unarySlash = match.unarySlash
 
-    if (expectHTML) {
-      if (lastTag === 'p' && isNonPhrasingTag(tagName)) {
-        parseEndTag(lastTag)
+    if (expectHTML) { // 编译的是web模板 // flow\compiler.js // only false for non-web builds
+      if (lastTag === 'p' && isNonPhrasingTag(tagName)) { // 应该是块级元素
+        parseEndTag(lastTag) // 结束标签处理
       }
-      if (canBeLeftOpenTag(tagName) && lastTag === tagName) {
-        parseEndTag(tagName)
+      if (canBeLeftOpenTag(tagName) && lastTag === tagName) { // 可信任的开标签
+        parseEndTag(tagName) // 结束标签处理
       }
     }
 
-    const unary = isUnaryTag(tagName) || !!unarySlash
+    const unary = isUnaryTag(tagName) || !!unarySlash 
 
     const l = match.attrs.length
     const attrs = new Array(l)
     for (let i = 0; i < l; i++) {
       const args = match.attrs[i]
-      const value = args[3] || args[4] || args[5] || ''
+      const value = args[3] || args[4] || args[5] || '' // (?:"([^"]*)"+|'([^']*)'+|([^\s"'=<>`]+))
       const shouldDecodeNewlines = tagName === 'a' && args[1] === 'href'
         ? options.shouldDecodeNewlinesForHref
         : options.shouldDecodeNewlines
       attrs[i] = {
         name: args[1],
-        value: decodeAttr(value, shouldDecodeNewlines)
+        value: decodeAttr(value, shouldDecodeNewlines) // 为什么属性值里面会有 &lt; 呢
       }
       if (process.env.NODE_ENV !== 'production' && options.outputSourceRange) {
-        attrs[i].start = args.start + args[0].match(/^\s*/).length
+        attrs[i].start = args.start + args[0].match(/^\s*/).length // 正则起始位置转为属性起始位置 (去掉空白字符)
         attrs[i].end = args.end
       }
     }
 
     if (!unary) {
       stack.push({ tag: tagName, lowerCasedTag: tagName.toLowerCase(), attrs: attrs, start: match.start, end: match.end })
-      lastTag = tagName // 一个新的起始标签
+      lastTag = tagName // 一个新的起始标签(对于这行代码上面的代码来说是上一个标签)
     }
 
     if (options.start) {
