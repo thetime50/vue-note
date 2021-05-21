@@ -110,7 +110,7 @@ export function parse (
     }
   }
 
-  function closeElement (element) {
+  function closeElement (element) { // 解析到闭合标签???
     trimEndingWhitespace(element)
     if (!inVPre && !element.processed) {
       element = processElement(element, options)

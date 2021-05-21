@@ -17,17 +17,17 @@ import { unicodeRegExp } from 'core/util/lang'
 const attribute = /^\s*([^\s"'<>\/=]+)(?:\s*(=)\s*(?:"([^"]*)"+|'([^']*)'+|([^\s"'=<>`]+)))?/
 const dynamicArgAttribute = /^\s*((?:v-[\w-]+:|@|:|#)\[[^=]+?\][^\s"'<>\/=]*)(?:\s*(=)\s*(?:"([^"]*)"+|'([^']*)'+|([^\s"'=<>`]+)))?/
 const ncname = `[a-zA-Z_][\\-\\.0-9_a-zA-Z${unicodeRegExp.source}]*`
-const qnameCapture = `((?:${ncname}\\:)?${ncname})`
+const qnameCapture = `((?:${ncname}\\:)?${ncname})` // (匹配并不获取 xxx\: )? 匹配 xxx
 const startTagOpen = new RegExp(`^<${qnameCapture}`)
 const startTagClose = /^\s*(\/?)>/
-const endTag = new RegExp(`^<\\/${qnameCapture}[^>]*>`)
+const endTag = new RegExp(`^<\\/${qnameCapture}[^>]*>`) // 任意的闭合标签?? // ^</ // /^<\/((?:[a-zA-Z_][\-\.0-9_a-zA-Za-zA-Z\u00B7\u00C0-\u00D6...]*\:)?[a-zA-Z_][\-\.0-9_a-zA-Za-zA-Z\u00B7\u00C0-\u00D6...]*)[^>]*>/
 const doctype = /^<!DOCTYPE [^>]+>/i
 // #7298: escape - to avoid being passed as HTML comment when inlined in page
-const comment = /^<!\--/
-const conditionalComment = /^<!\[/
+const comment = /^<!\--/ // 注释开始
+const conditionalComment = /^<!\[/ // 条件注释??
 
 // Special Elements (can contain anything)
-export const isPlainTextElement = makeMap('script,style,textarea', true)
+export const isPlainTextElement = makeMap('script,style,textarea', true) // 以,为分隔符 构造标志位对象
 const reCache = {}
 
 const decodingMap = {
@@ -51,7 +51,7 @@ function decodeAttr (value, shouldDecodeNewlines) {
   return value.replace(re, match => decodingMap[match])
 }
 
-export function parseHTML (html, options) {
+export function parseHTML (html, options) { // parseHTML options 有自己的配置结构
   const stack = []
   const expectHTML = options.expectHTML
   const isUnaryTag = options.isUnaryTag || no
@@ -61,9 +61,9 @@ export function parseHTML (html, options) {
   while (html) {
     last = html
     // Make sure we're not in a plaintext content element like script/style
-    if (!lastTag || !isPlainTextElement(lastTag)) {
+    if (!lastTag || !isPlainTextElement(lastTag)) { // 不是script,style,textarea标签
       let textEnd = html.indexOf('<')
-      if (textEnd === 0) {
+      if (textEnd === 0) { // 以 < 开头
         // Comment:
         if (comment.test(html)) {
           const commentEnd = html.indexOf('-->')
@@ -72,13 +72,13 @@ export function parseHTML (html, options) {
             if (options.shouldKeepComment) {
               options.comment(html.substring(4, commentEnd), index, index + commentEnd + 3)
             }
-            advance(commentEnd + 3)
+            advance(commentEnd + 3) // 累加index 并裁剪已解析字符串
             continue
           }
         }
 
         // http://en.wikipedia.org/wiki/Conditional_comment#Downlevel-revealed_conditional_comment
-        if (conditionalComment.test(html)) {
+        if (conditionalComment.test(html)) { // 对于ie 的条件注释 <![if !IE]>
           const conditionalEnd = html.indexOf(']>')
 
           if (conditionalEnd >= 0) {
@@ -88,25 +88,25 @@ export function parseHTML (html, options) {
         }
 
         // Doctype:
-        const doctypeMatch = html.match(doctype)
+        const doctypeMatch = html.match(doctype) // 页面文件模板 <!DOCTYPE 标签
         if (doctypeMatch) {
           advance(doctypeMatch[0].length)
           continue
         }
 
         // End tag:
-        const endTagMatch = html.match(endTag)
+        const endTagMatch = html.match(endTag) // '</xxx>'.match( /^<\/((?:xxx)?xxx)[^>]*>/)
         if (endTagMatch) {
           const curIndex = index
-          advance(endTagMatch[0].length)
-          parseEndTag(endTagMatch[1], curIndex, index)
+          advance(endTagMatch[0].length) // </xxx>
+          parseEndTag(endTagMatch[1], curIndex, index) // xxx
           continue
         }
 
         // Start tag:
-        const startTagMatch = parseStartTag()
+        const startTagMatch = parseStartTag() // 起始标签解析
         if (startTagMatch) {
-          handleStartTag(startTagMatch)
+          handleStartTag(startTagMatch) // 起始标签处理
           if (shouldIgnoreFirstNewline(startTagMatch.tagName, html)) {
             advance(1)
           }
@@ -183,7 +183,7 @@ export function parseHTML (html, options) {
     index += n
     html = html.substring(n)
   }
-
+  // 起始标签解析
   function parseStartTag () {
     const start = html.match(startTagOpen)
     if (start) {
@@ -208,7 +208,7 @@ export function parseHTML (html, options) {
       }
     }
   }
-
+  // 起始标签处理
   function handleStartTag (match) {
     const tagName = match.tagName
     const unarySlash = match.unarySlash
@@ -244,7 +244,7 @@ export function parseHTML (html, options) {
 
     if (!unary) {
       stack.push({ tag: tagName, lowerCasedTag: tagName.toLowerCase(), attrs: attrs, start: match.start, end: match.end })
-      lastTag = tagName
+      lastTag = tagName // 一个新的起始标签
     }
 
     if (options.start) {
@@ -260,7 +260,7 @@ export function parseHTML (html, options) {
     // Find the closest opened tag of the same type
     if (tagName) {
       lowerCasedTagName = tagName.toLowerCase()
-      for (pos = stack.length - 1; pos >= 0; pos--) {
+      for (pos = stack.length - 1; pos >= 0; pos--) { // 栈内最后加入的和当前结束标签相同的标签
         if (stack[pos].lowerCasedTag === lowerCasedTagName) {
           break
         }
@@ -282,19 +282,19 @@ export function parseHTML (html, options) {
             { start: stack[i].start, end: stack[i].end }
           )
         }
-        if (options.end) {
-          options.end(stack[i].tag, start, end)
+        if (options.end) { // 结束标签处理
+          options.end(stack[i].tag, start, end) // todo
         }
       }
 
       // Remove the open elements from the stack
       stack.length = pos
-      lastTag = pos && stack[pos - 1].tag
+      lastTag = pos && stack[pos - 1].tag // 回退一下当前tag
     } else if (lowerCasedTagName === 'br') {
       if (options.start) {
-        options.start(tagName, [], true, start, end)
+        options.start(tagName, [], true, start, end) // br标签的结束是怎么处理的??
       }
-    } else if (lowerCasedTagName === 'p') {
+    } else if (lowerCasedTagName === 'p') { // 直接处理成一个p标签的开始标签和结束标签
       if (options.start) {
         options.start(tagName, [], false, start, end)
       }
