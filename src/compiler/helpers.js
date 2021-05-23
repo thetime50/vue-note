@@ -62,7 +62,7 @@ export function addDirective (
 
 function prependModifierMarker (symbol: string, name: string, dynamic?: boolean): string {
   return dynamic
-    ? `_p(${name},"${symbol}")`
+    ? `_p(${name},"${symbol}")` // 如果是动态的事件就通过p函数调用
     : symbol + name // mark the event as captured
 }
 
@@ -93,7 +93,7 @@ export function addHandler (
   // normalize click.right and click.middle since they don't actually fire
   // this is technically browser-specific, but at least for now browsers are
   // the only target envs that have right/middle clicks.
-  if (modifiers.right) {
+  if (modifiers.right) { // 如果是右键点击替换为contextmenu事件
     if (dynamic) {
       name = `(${name})==='click'?'contextmenu':(${name})`
     } else if (name === 'click') {
@@ -101,6 +101,10 @@ export function addHandler (
       delete modifiers.right
     }
   } else if (modifiers.middle) {
+    // 点击左键会触发mouseup事件
+    // 点击中键会同时触发mouseup click.middle事件
+    // 事件 参数which: 2
+    // 对 click.middle有做witch 过滤，不会被左键触发 // 没看到有过滤的代码???
     if (dynamic) {
       name = `(${name})==='click'?'mouseup':(${name})`
     } else if (name === 'click') {
@@ -108,6 +112,7 @@ export function addHandler (
     }
   }
 
+  // 给事件名称添加修饰符
   // check capture modifier
   if (modifiers.capture) {
     delete modifiers.capture
@@ -138,6 +143,7 @@ export function addHandler (
 
   const handlers = events[name]
   /* istanbul ignore if */
+  // 添加到事件列表或单个事件
   if (Array.isArray(handlers)) {
     important ? handlers.unshift(newHandler) : handlers.push(newHandler)
   } else if (handlers) {

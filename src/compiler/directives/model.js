@@ -33,11 +33,12 @@ export function genComponentModel (
 /**
  * Cross-platform codegen helper for generating v-model value assignment code.
  */
+// .sync数据同步处理事件
 export function genAssignmentCode (
   value: string,
-  assignment: string
+  assignment: string //事件回调参数变量
 ): string {
-  const res = parseModel(value)
+  const res = parseModel(value) // 解析同步数据根节点和后续属性
   if (res.key === null) {
     return `${value}=${assignment}`
   } else {
@@ -73,14 +74,14 @@ export function parseModel (val: string): ModelParseResult {
   val = val.trim()
   len = val.length
 
-  if (val.indexOf('[') < 0 || val.lastIndexOf(']') < len - 1) {
+  if (val.indexOf('[') < 0 || val.lastIndexOf(']') < len - 1) { // 不存在[ 或者不是]结尾
     index = val.lastIndexOf('.')
-    if (index > -1) {
+    if (index > -1) { // 根数据的属性
       return {
         exp: val.slice(0, index),
         key: '"' + val.slice(index + 1) + '"'
       }
-    } else {
+    } else { // 根数据
       return {
         exp: val,
         key: null
@@ -88,22 +89,23 @@ export function parseModel (val: string): ModelParseResult {
     }
   }
 
+  // xxx[xxxx] // 存在[ 并且是]结尾
   str = val
   index = expressionPos = expressionEndPos = 0
 
   while (!eof()) {
     chr = next()
     /* istanbul ignore if */
-    if (isStringStart(chr)) {
-      parseString(chr)
-    } else if (chr === 0x5B) {
-      parseBracket(chr)
+    if (isStringStart(chr)) { // " ' 
+      parseString(chr) // 字符串区间(配对)
+    } else if (chr === 0x5B) { // [
+      parseBracket(chr) // [] 处理(配对)
     }
   }
 
   return {
-    exp: val.slice(0, expressionPos),
-    key: val.slice(expressionPos + 1, expressionEndPos)
+    exp: val.slice(0, expressionPos),//根数据节点
+    key: val.slice(expressionPos + 1, expressionEndPos) // []部分
   }
 }
 
@@ -116,7 +118,7 @@ function eof (): boolean {
 }
 
 function isStringStart (chr: number): boolean {
-  return chr === 0x22 || chr === 0x27
+  return chr === 0x22 || chr === 0x27 // " ' 
 }
 
 function parseBracket (chr: number): void {
@@ -124,12 +126,12 @@ function parseBracket (chr: number): void {
   expressionPos = index
   while (!eof()) {
     chr = next()
-    if (isStringStart(chr)) {
-      parseString(chr)
+    if (isStringStart(chr)) { // " ' 
+      parseString(chr) // 字符串区间
       continue
     }
-    if (chr === 0x5B) inBracket++
-    if (chr === 0x5D) inBracket--
+    if (chr === 0x5B) inBracket++ // [
+    if (chr === 0x5D) inBracket-- // ]
     if (inBracket === 0) {
       expressionEndPos = index
       break

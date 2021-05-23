@@ -778,24 +778,24 @@ function processAttrs (el) {
   for (i = 0, l = list.length; i < l; i++) {
     name = rawName = list[i].name
     value = list[i].value
-    if (dirRE.test(name)) {
+    if (dirRE.test(name)) { // 指令属性正则
       // mark element as dynamic
       el.hasBindings = true
       // modifiers
-      modifiers = parseModifiers(name.replace(dirRE, ''))
+      modifiers = parseModifiers(name.replace(dirRE, '')) // 获取(等号左边的)修饰符 .[xxx]
       // support .foo shorthand syntax for the .prop modifier
-      if (process.env.VBIND_PROP_SHORTHAND && propBindRE.test(name)) {
-        (modifiers || (modifiers = {})).prop = true
-        name = `.` + name.slice(1).replace(modifierRE, '')
+      if (process.env.VBIND_PROP_SHORTHAND && propBindRE.test(name)) { // .开头?
+        (modifiers || (modifiers = {})).prop = true // 加上一个.prop=true属性
+        name = `.` + name.slice(1).replace(modifierRE, '') // 获取第一段 name 的部分
       } else if (modifiers) {
-        name = name.replace(modifierRE, '')
+        name = name.replace(modifierRE, '') // 获取第一段 name 的部分
       }
       if (bindRE.test(name)) { // v-bind
         name = name.replace(bindRE, '')
-        value = parseFilters(value)
-        isDynamic = dynamicArgRE.test(name)
+        value = parseFilters(value) // 按过滤器规则处理为函数字符串
+        isDynamic = dynamicArgRE.test(name) // 动态的属性名 :[xxx] = 
         if (isDynamic) {
-          name = name.slice(1, -1)
+          name = name // 去[]
         }
         if (
           process.env.NODE_ENV !== 'production' &&
@@ -807,16 +807,16 @@ function processAttrs (el) {
         }
         if (modifiers) {
           if (modifiers.prop && !isDynamic) {
-            name = camelize(name)
+            name = camelize(name) // 将- 连字符属性名转为驼峰格式
             if (name === 'innerHtml') name = 'innerHTML'
           }
           if (modifiers.camel && !isDynamic) {
             name = camelize(name)
           }
           if (modifiers.sync) {
-            syncGen = genAssignmentCode(value, `$event`)
+            syncGen = genAssignmentCode(value, `$event`) // 获取数据同步事件
             if (!isDynamic) {
-              addHandler(
+              addHandler( // 添加一个update: 事件
                 el,
                 `update:${camelize(name)}`,
                 syncGen,
@@ -825,10 +825,10 @@ function processAttrs (el) {
                 warn,
                 list[i]
               )
-              if (hyphenate(name) !== camelize(name)) {
+              if (hyphenate(name) !== camelize(name)) { // 同时兼容驼峰格式格式的连字符格式的事件
                 addHandler(
                   el,
-                  `update:${hyphenate(name)}`,
+                  `update:${hyphenate(name)}`, // 驼峰转连字符
                   syncGen,
                   null,
                   false,
@@ -852,20 +852,20 @@ function processAttrs (el) {
           }
         }
         if ((modifiers && modifiers.prop) || (
-          !el.component && platformMustUseProp(el.tag, el.attrsMap.type, name)
+          !el.component && platformMustUseProp(el.tag, el.attrsMap.type, name) // 检查组件必须有的属性
         )) {
           addProp(el, name, value, list[i], isDynamic)
         } else {
           addAttr(el, name, value, list[i], isDynamic)
         }
-      } else if (onRE.test(name)) { // v-on
+      } else if (onRE.test(name)) { // v-on // 事件处理
         name = name.replace(onRE, '')
-        isDynamic = dynamicArgRE.test(name)
+        isDynamic = dynamicArgRE.test(name) // 动态的事件名称
         if (isDynamic) {
           name = name.slice(1, -1)
         }
-        addHandler(el, name, value, modifiers, false, warn, list[i], isDynamic)
-      } else { // normal directives
+        addHandler(el, name, value, modifiers, false, warn, list[i], isDynamic) // 添加事件
+      } else { // normal directives // 命令处理
         name = name.replace(dirRE, '')
         // parse arg
         const argMatch = name.match(argRE)
@@ -883,7 +883,7 @@ function processAttrs (el) {
           checkForAliasModel(el, value)
         }
       }
-    } else {
+    } else { // 静态属性
       // literal attribute
       if (process.env.NODE_ENV !== 'production') {
         const res = parseText(value, delimiters)
@@ -924,7 +924,7 @@ function parseModifiers (name: string): Object | void {
   const match = name.match(modifierRE)
   if (match) {
     const ret = {}
-    match.forEach(m => { ret[m.slice(1)] = true })
+    match.forEach(m => { ret[m.slice(1)] = true }) // 提取修饰符
     return ret
   }
 }
