@@ -22,6 +22,7 @@ export const createCompiler = createCompilerCreator(function baseCompile (
   return {
     ast,
     render: code.render,
+    // 并从code字符串构造rander函数
     staticRenderFns: code.staticRenderFns
   }
 })

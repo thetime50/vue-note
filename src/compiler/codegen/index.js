@@ -73,11 +73,11 @@ export function genElement (el: ASTElement, state: CodegenState): string {
     // component or element
     let code
     if (el.component) {
-      code = genComponent(el.component, el, state)
+      code = genComponent(el.component, el, state) // 编码组件函数
     } else {
       let data
       if (!el.plain || (el.pre && state.maybeComponent(el))) {
-        data = genData(el, state)
+        data = genData(el, state) // 将属性事件等处理为渲染函数字符串
       }
 
       const children = el.inlineTemplate ? null : genChildren(el, state, true)
