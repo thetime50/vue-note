@@ -117,9 +117,9 @@ export function parse (
   }
 
   function closeElement (element) { // 解析到闭合标签???
-    trimEndingWhitespace(element)
+    trimEndingWhitespace(element) // 移除末尾的空白文本节点
     if (!inVPre && !element.processed) {
-      element = processElement(element, options)
+      element = processElement(element, options) // **
     }
     // tree management
     if (!stack.length && element !== root) {
@@ -207,6 +207,8 @@ export function parse (
     }
   }
 
+  // 做标签和属性域的提取
+  // 详细的属性解析 ast构建在start end 等回调里
   parseHTML(template, {
     warn,
     expectHTML: options.expectHTML,
@@ -228,6 +230,7 @@ export function parse (
       }
 
       // element 就是 ast
+      // attrs -> attrsList[],attrsMap{}
       let element: ASTElement = createASTElement(tag, attrs, currentParent)
       if (ns) {
         element.ns = ns // 从父组件继承到相同的namespace
@@ -270,7 +273,7 @@ export function parse (
 
       // apply pre-transforms
       for (let i = 0; i < preTransforms.length; i++) {
-        element = preTransforms[i](element, options) || element
+        element = preTransforms[i](element, options) || element // baseOption 里 v-model 才有这个字段
       }
 
       if (!inVPre) {
@@ -314,7 +317,7 @@ export function parse (
       if (process.env.NODE_ENV !== 'production' && options.outputSourceRange) {
         element.end = end
       }
-      closeElement(element)
+      closeElement(element) // **
     },
 
     chars (text: string, start: number, end: number) {

@@ -53,7 +53,7 @@ function decodeAttr (value, shouldDecodeNewlines) {
 }
 
 export function parseHTML (html, options) { // parseHTML options 有自己的配置结构
-  const stack = []
+  const stack = [] // 标签配对 标签闭合用
   const expectHTML = options.expectHTML
   const isUnaryTag = options.isUnaryTag || no
   const canBeLeftOpenTag = options.canBeLeftOpenTag || no
@@ -100,14 +100,14 @@ export function parseHTML (html, options) { // parseHTML options 有自己的配
         if (endTagMatch) {
           const curIndex = index
           advance(endTagMatch[0].length) // </xxx>
-          parseEndTag(endTagMatch[1], curIndex, index) // xxx
+          parseEndTag(endTagMatch[1], curIndex, index) // xxx // **结束标签处理
           continue
         }
 
         // Start tag:
-        const startTagMatch = parseStartTag() // 起始标签解析
+        const startTagMatch = parseStartTag() // **起始标签解析 { tagName, attrs: [str1,str2], start, }
         if (startTagMatch) {
-          handleStartTag(startTagMatch) // 起始标签处理
+          handleStartTag(startTagMatch) // **起始标签处理
           if (shouldIgnoreFirstNewline(startTagMatch.tagName, html)) { // 忽略第一行换行的元素
             advance(1)
           }
@@ -116,16 +116,17 @@ export function parseHTML (html, options) { // parseHTML options 有自己的配
       }
 
       let text, rest, next
+      // 处理文本域
       if (textEnd >= 0) {
         rest = html.slice(textEnd)
-        while (
-          !endTag.test(rest) &&
-          !startTagOpen.test(rest) &&
-          !comment.test(rest) &&
-          !conditionalComment.test(rest)
+        while ( 
+          !endTag.test(rest) && // 当前位置不是闭合标签
+          !startTagOpen.test(rest) && // 当前位置不是起始标签
+          !comment.test(rest) &&  // 当前位置不是注释
+          !conditionalComment.test(rest) // 当前位置不是条件注释
         ) {
           // < in plain text, be forgiving and treat it as text
-          next = rest.indexOf('<', 1)
+          next = rest.indexOf('<', 1) // 文本域结束
           if (next < 0) break
           textEnd += next
           rest = html.slice(textEnd)
@@ -133,7 +134,7 @@ export function parseHTML (html, options) { // parseHTML options 有自己的配
         text = html.substring(0, textEnd)
       }
 
-      if (textEnd < 0) {
+      if (textEnd < 0) { // 没有其他标签了 全都是文本域
         text = html
       }
 
@@ -214,7 +215,7 @@ export function parseHTML (html, options) { // parseHTML options 有自己的配
   // 起始标签处理
   function handleStartTag (match) {
     const tagName = match.tagName
-    const unarySlash = match.unarySlash
+    const unarySlash = match.unarySlash // 是在这个函数里添加的
 
     if (expectHTML) { // 编译的是web模板 // flow\compiler.js // only false for non-web builds
       if (lastTag === 'p' && isNonPhrasingTag(tagName)) { // 应该是块级元素
@@ -229,6 +230,7 @@ export function parseHTML (html, options) { // parseHTML options 有自己的配
 
     const l = match.attrs.length
     const attrs = new Array(l)
+    // match.attrs -> { name,value } // ast.attrsList[]
     for (let i = 0; i < l; i++) {
       const args = match.attrs[i]
       const value = args[3] || args[4] || args[5] || '' // (?:"([^"]*)"+|'([^']*)'+|([^\s"'=<>`]+))

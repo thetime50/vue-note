@@ -38,7 +38,7 @@ function preTransformNode (el: ASTElement, options: CompilerOptions) {
       typeBinding = `(${map['v-bind']}).type`
     }
 
-    if (typeBinding) { // 得到type绑定的属性
+    if (typeBinding) { // 得到type绑定的属性 通过 v-if命令切换type
       const ifCondition = getAndRemoveAttr(el, 'v-if', true)
       const ifConditionExtra = ifCondition ? `&&(${ifCondition})` : ``
       const hasElse = getAndRemoveAttr(el, 'v-else', true) != null
@@ -51,7 +51,7 @@ function preTransformNode (el: ASTElement, options: CompilerOptions) {
       processElement(branch0, options)
       branch0.processed = true // prevent it from double-processed
       branch0.if = `(${typeBinding})==='checkbox'` + ifConditionExtra
-      addIfCondition(branch0, {
+      addIfCondition(branch0, { // 加到el.ifConditions[]里面
         exp: branch0.if,
         block: branch0
       })
